@@ -59,12 +59,12 @@ The stopwatch state format is: `⏱️[HH:MM:SS|elapsed_milliseconds|running|sto
 1. Clone this repository into your Obsidian vault's plugins folder:
    ```bash
    cd /path/to/vault/.obsidian/plugins
-   git clone https://github.com/yourusername/obsidian-stopwatch.git
+   git clone https://github.com/mbugti04/Obsidian-Plaintext-Stopwatch.git
    ```
 
 2. Install dependencies:
    ```bash
-   cd obsidian-stopwatch
+   cd Obsidian-Plaintext-Stopwatch
    npm install
    ```
 
