@@ -6,5 +6,6 @@
   "description": "Add in-text stopwatches to track time spent on activities",
   "author": "mbugti04",
   "authorUrl": "https://github.com/mbugti04",
+  "license": "MIT",
   "isDesktopOnly": false
 }

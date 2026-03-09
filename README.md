@@ -93,4 +93,4 @@ npm run build
 
 ## License
 
-None
+MIT
