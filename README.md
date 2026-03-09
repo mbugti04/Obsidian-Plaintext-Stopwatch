@@ -2,6 +2,8 @@
 
 A simple Obsidian plugin that lets you insert interactive stopwatches directly into your notes. Track time spent on activities with in-text stopwatches that store their state as **plain text** in your markdown files.
 
+https://github.com/user-attachments/assets/809ff7d4-dd9d-40db-ba95-0f128f5beff2
+
 ## Installation
 
 1. Download the latest release from the GitHub releases page
