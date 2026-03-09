@@ -1,0 +1,75 @@
+/* Stopwatch Plugin Styles */
+
+.stopwatch-container {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	margin: 0 4px;
+	vertical-align: middle;
+}
+
+.stopwatch-display {
+	font-weight: 600;
+	min-width: 65px;
+	text-align: center;
+	color: var(--text-normal);
+}
+
+.stopwatch-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 2px 4px;
+	font-size: 12px;
+	border-radius: 3px;
+	transition: background-color 0.2s;
+	color: var(--text-muted);
+	line-height: 1;
+}
+
+.stopwatch-btn:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.stopwatch-btn:active {
+	background-color: var(--background-modifier-active-hover);
+}
+
+.stopwatch-start-btn {
+	color: var(--color-green);
+}
+
+.stopwatch-stop-btn {
+	color: var(--color-red);
+}
+
+.stopwatch-reset-btn {
+	color: var(--color-orange);
+}
+
+.stopwatch-finalize-btn {
+	color: var(--color-blue);
+}
+
+.stopwatch-finalized {
+	display: inline;
+	padding: 2px 6px;
+	background-color: var(--background-secondary-alt);
+	border-radius: 3px;
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	color: var(--text-muted);
+	margin: 0 2px;
+}
+
+/* Dark mode adjustments */
+.theme-dark .stopwatch-container {
+	background-color: var(--background-primary-alt);
+}

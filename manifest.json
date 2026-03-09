@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-plaintext-stopwatch",
+  "name": "Obsidian Plaintext Stopwatch",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Add in-text stopwatches to track time spent on activities",
+  "author": "mbugti04",
+  "authorUrl": "https://github.com/mbugti04",
+  "isDesktopOnly": false
+}
