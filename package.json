@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-plaintext-stopwatch",
+  "name": "plaintext-stopwatch",
   "version": "1.1.0",
-  "description": "Add in-text stopwatches to track time in Obsidian",
+  "description": "Add in-text stopwatches that store their state as plain text in your notes.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -14,9 +14,10 @@
     "stopwatch",
     "time-tracking"
   ],
-  "author": "",
+  "author": "mbugti04",
   "license": "MIT",
   "devDependencies": {
+    "@codemirror/language": "^6.13.1",
     "@types/node": "^16.11.6",
     "@typescript-eslint/eslint-plugin": "5.29.0",
     "@typescript-eslint/parser": "5.29.0",

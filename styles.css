@@ -46,6 +46,11 @@
 	color: var(--color-green);
 }
 
+.stopwatch-container.is-running .stopwatch-start-btn,
+.stopwatch-container:not(.is-running) .stopwatch-stop-btn {
+	display: none;
+}
+
 .stopwatch-stop-btn {
 	color: var(--color-red);
 }
