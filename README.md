@@ -21,10 +21,10 @@ https://github.com/user-attachments/assets/809ff7d4-dd9d-40db-ba95-0f128f5beff2
 
 A stopwatch will be inserted at your cursor position. In the markdown file, it looks like:
 ```
-⏱️[00:00:00|0|stopped]
+⏱️[00:00:00|0|0|stopped]
 ```
 
-This format stores: `⏱️[time|elapsed_ms|status]`
+This format stores: `⏱️[time|accumulated_seconds|start_epoch_seconds|status]`
 
 ### Using the Stopwatch
 
@@ -39,12 +39,12 @@ Each stopwatch has four controls:
 
 **Active Stopwatch** (in the markdown file):
 ```
-Working on project X: ⏱️[00:00:00|0|stopped]
+Working on project X: ⏱️[00:00:00|0|0|stopped]
 ```
 
 **Running Stopwatch** (updates in the markdown):
 ```
-Working on project X: ⏱️[00:25:30|1530000|running]
+Working on project X: ⏱️[00:25:30|0|1760000000|running]
 ```
 
 **Finalized** (after clicking ✓):
@@ -52,7 +52,7 @@ Working on project X: ⏱️[00:25:30|1530000|running]
 Working on project X: ⏱️ 00:25:30 (14:30 - 14:55)
 ```
 
-The stopwatch state format is: `⏱️[HH:MM:SS|elapsed_milliseconds|running|stopped]`
+The stopwatch state format is: `⏱️[HH:MM:SS|accumulated_seconds|start_epoch_seconds|running|stopped]`
 
 ## Development
 
