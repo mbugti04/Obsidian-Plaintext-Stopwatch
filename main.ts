@@ -1,4 +1,11 @@
-import { App, Editor, MarkdownView, Plugin, TFile } from 'obsidian';
+import { Editor, MarkdownView, Plugin, TFile, editorLivePreviewField } from 'obsidian';
+import { RangeSetBuilder } from '@codemirror/state';
+import { Decoration, DecorationSet, EditorView, PluginValue, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
+
+// New: [HH:MM:SS|acc_s|start_s|status]   Legacy: [HH:MM:SS|elapsed_ms|status]
+const STOPWATCH_PATTERN = /⏱️\[(\d{2,}:\d{2}:\d{2})\|(\d+)\|(?:(\d+)\|)?(running|stopped)\]/g;
+
+type Writer = (oldText: string, newText: string) => void | Promise<void>;
 
 interface StopwatchState {
 	accumulated: number; // seconds banked from previous runs
@@ -30,6 +37,8 @@ export default class StopwatchPlugin extends Plugin {
 			});
 		}, 250));
 
+		this.registerEditorExtension(this.buildLivePreviewExtension());
+
 		this.registerMarkdownPostProcessor((element, context) => {
 			this.processStopwatchElements(element, context);
 		});
@@ -47,6 +56,67 @@ export default class StopwatchPlugin extends Plugin {
 		return `⏱️[${this.formatTime(this.currentElapsed(s))}|${s.accumulated}|${s.isRunning ? s.startSec : 0}|${s.isRunning ? 'running' : 'stopped'}]`;
 	}
 
+	private parseState(match: RegExpExecArray): StopwatchState {
+		const isRunning = match[4] === 'running';
+		return match[3] !== undefined
+			? { accumulated: parseInt(match[2]), startSec: parseInt(match[3]), isRunning }
+			// Legacy format (ms): resume from now
+			: { accumulated: Math.floor(parseInt(match[2]) / 1000), startSec: this.nowSec(), isRunning };
+	}
+
+	private buildLivePreviewExtension() {
+		const plugin = this;
+
+		class StopwatchWidget extends WidgetType {
+			constructor(private raw: string, private state: StopwatchState) { super(); }
+			eq(other: StopwatchWidget) { return other.raw === this.raw; }
+			toDOM(view: EditorView) {
+				let el: HTMLElement;
+				const write: Writer = (oldText, newText) => {
+					// Locate the text in the editor doc: prefer this widget's position, fall back to a search
+					const doc = view.state.doc;
+					let from = -1;
+					try {
+						const pos = view.posAtDOM(el);
+						if (doc.sliceString(pos, pos + oldText.length) === oldText) from = pos;
+					} catch (e) { /* detached */ }
+					if (from < 0) from = doc.toString().indexOf(oldText);
+					if (from < 0) return;
+					view.dispatch({ changes: { from, to: from + oldText.length, insert: newText } });
+				};
+				el = plugin.createStopwatchElement(this.state, this.raw, write);
+				return el;
+			}
+		}
+
+		const build = (view: EditorView): DecorationSet => {
+			const builder = new RangeSetBuilder<Decoration>();
+			if (!view.state.field(editorLivePreviewField, false)) return builder.finish();
+			const sel = view.state.selection;
+			for (const { from, to } of view.visibleRanges) {
+				const text = view.state.doc.sliceString(from, to);
+				const re = new RegExp(STOPWATCH_PATTERN.source, 'g');
+				let m: RegExpExecArray | null;
+				while ((m = re.exec(text)) !== null) {
+					const start = from + m.index;
+					const end = start + m[0].length;
+					// Show raw text while the cursor/selection touches it so it stays editable
+					if (sel.ranges.some((r) => r.from <= end && r.to >= start)) continue;
+					builder.add(start, end, Decoration.replace({ widget: new StopwatchWidget(m[0], plugin.parseState(m)) }));
+				}
+			}
+			return builder.finish();
+		};
+
+		return ViewPlugin.fromClass(class implements PluginValue {
+			decorations: DecorationSet;
+			constructor(view: EditorView) { this.decorations = build(view); }
+			update(u: ViewUpdate) {
+				if (u.docChanged || u.viewportChanged || u.selectionSet) this.decorations = build(u.view);
+			}
+		}, { decorations: (v) => v.decorations });
+	}
+
 	private processStopwatchElements(element: HTMLElement, context: any) {
 		const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
 		const nodesToReplace: Array<{node: Node, parent: Node}> = [];
@@ -61,7 +131,7 @@ export default class StopwatchPlugin extends Plugin {
 		nodesToReplace.forEach(({node, parent}) => {
 			const text = node.textContent || '';
 			// New: [HH:MM:SS|acc_s|start_s|status]   Legacy: [HH:MM:SS|elapsed_ms|status]
-			const pattern = /⏱️\[(\d{2,}:\d{2}:\d{2})\|(\d+)\|(?:(\d+)\|)?(running|stopped)\]/g;
+			const pattern = new RegExp(STOPWATCH_PATTERN.source, 'g');
 			let lastIndex = 0;
 			let match;
 
@@ -70,12 +140,8 @@ export default class StopwatchPlugin extends Plugin {
 					parent.insertBefore(document.createTextNode(text.substring(lastIndex, match.index)), node);
 				}
 
-				const isRunning = match[4] === 'running';
-				const state: StopwatchState = match[3] !== undefined
-					? { accumulated: parseInt(match[2]), startSec: parseInt(match[3]), isRunning }
-					// Legacy format (ms): resume from now
-					: { accumulated: Math.floor(parseInt(match[2]) / 1000), startSec: this.nowSec(), isRunning };
-				parent.insertBefore(this.createStopwatchElement(state, match[0], context), node);
+				const write: Writer = (oldText, newText) => this.replaceInFile(context.sourcePath, oldText, newText);
+				parent.insertBefore(this.createStopwatchElement(this.parseState(match), match[0], write), node);
 				lastIndex = pattern.lastIndex;
 			}
 
@@ -86,7 +152,7 @@ export default class StopwatchPlugin extends Plugin {
 		});
 	}
 
-	private createStopwatchElement(initial: StopwatchState, rawText: string, context: any): HTMLElement {
+	private createStopwatchElement(initial: StopwatchState, rawText: string, write: Writer): HTMLElement {
 		let state = initial;
 		const container = document.createElement('span');
 		container.addClass('stopwatch-container');
@@ -107,7 +173,6 @@ export default class StopwatchPlugin extends Plugin {
 		const finalizeBtn = makeBtn('stopwatch-finalize-btn', '✓', 'Finalize (converts to plain text)');
 		container.append(display, startBtn, stopBtn, resetBtn, finalizeBtn);
 
-		const sourcePath = context.sourcePath;
 		let current = rawText; // exact text currently in the file for this stopwatch
 
 		const refresh = () => {
@@ -120,7 +185,7 @@ export default class StopwatchPlugin extends Plugin {
 		};
 		const persist = async () => {
 			const next = this.serialize(state);
-			await this.replaceInFile(sourcePath, current, next);
+			await write(current, next);
 			current = next;
 		};
 
@@ -142,7 +207,7 @@ export default class StopwatchPlugin extends Plugin {
 			const total = this.currentElapsed(state);
 			const endTime = new Date();
 			const startTime = new Date(endTime.getTime() - total * 1000);
-			await this.replaceInFile(sourcePath, current, `⏱️ ${this.formatTime(total)} (${this.formatDateTime(startTime)} - ${this.formatDateTime(endTime)})`);
+			await write(current, `⏱️ ${this.formatTime(total)} (${this.formatDateTime(startTime)} - ${this.formatDateTime(endTime)})`);
 		});
 
 		return container;
