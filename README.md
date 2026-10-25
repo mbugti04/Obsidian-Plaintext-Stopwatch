@@ -17,12 +17,13 @@ In Live Preview, move the cursor onto a stopwatch to edit its raw text. Stopwatc
 ## Format
 
 ```
-⏱️[HH:MM:SS|accumulated_seconds|start_epoch_seconds|status]
+⏱️[HH:MM:SS|accumulated_seconds|start_epoch_seconds|status|first_start_epoch_seconds]
 ```
 
 - `accumulated_seconds`: time banked from earlier runs
 - `start_epoch_seconds`: Unix time the current run started (`0` when stopped)
 - `status`: `running` or `stopped`
+- `first_start_epoch_seconds` (optional): Unix time of the first start, so finalizing shows the true start time even after pauses. Stopwatches without it still work.
 
 Elapsed time is `accumulated + (now - start)`. `HH:MM:SS` is a snapshot from the last click.
 

@@ -3,8 +3,8 @@ import { syntaxTree } from '@codemirror/language';
 import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView, PluginValue, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
 
-// New: [HH:MM:SS|acc_s|start_s|status]   Legacy: [HH:MM:SS|elapsed_ms|status]
-const STOPWATCH_PATTERN = /⏱️\[(\d{2,}:\d{2}:\d{2})\|(\d+)\|(?:(\d+)\|)?(running|stopped)\]/g;
+// New: [HH:MM:SS|acc_s|start_s|status|first_start_s?]   Older: [HH:MM:SS|acc_s|start_s|status]   Legacy: [HH:MM:SS|elapsed_ms|status]
+const STOPWATCH_PATTERN = /⏱️\[(\d{2,}:\d{2}:\d{2})\|(\d+)\|(?:(\d+)\|)?(running|stopped)(?:\|(\d+))?\]/g;
 
 type Writer = (oldText: string, newText: string) => void | Promise<void>;
 
@@ -12,6 +12,7 @@ interface StopwatchState {
 	accumulated: number; // seconds banked from previous runs
 	startSec: number;    // epoch seconds when the current run began (0 if stopped)
 	isRunning: boolean;
+	firstStartSec: number; // epoch seconds of the very first start since reset (0 if unknown)
 }
 
 export default class StopwatchPlugin extends Plugin {
@@ -52,15 +53,15 @@ export default class StopwatchPlugin extends Plugin {
 	}
 
 	private serialize(s: StopwatchState): string {
-		return `⏱️[${this.formatTime(this.currentElapsed(s))}|${s.accumulated}|${s.isRunning ? s.startSec : 0}|${s.isRunning ? 'running' : 'stopped'}]`;
+		return `⏱️[${this.formatTime(this.currentElapsed(s))}|${s.accumulated}|${s.isRunning ? s.startSec : 0}|${s.isRunning ? 'running' : 'stopped'}${s.firstStartSec > 0 ? `|${s.firstStartSec}` : ''}]`;
 	}
 
 	private parseState(match: RegExpExecArray): StopwatchState {
 		const isRunning = match[4] === 'running';
 		return match[3] !== undefined
-			? { accumulated: parseInt(match[2]), startSec: parseInt(match[3]), isRunning }
+			? { accumulated: parseInt(match[2]), startSec: parseInt(match[3]), isRunning, firstStartSec: match[5] !== undefined ? parseInt(match[5]) : 0 }
 			// Legacy format (ms): resume from now
-			: { accumulated: Math.floor(parseInt(match[2]) / 1000), startSec: this.nowSec(), isRunning };
+			: { accumulated: Math.floor(parseInt(match[2]) / 1000), startSec: this.nowSec(), isRunning, firstStartSec: 0 };
 	}
 
 	private buildLivePreviewExtension() {
@@ -114,7 +115,8 @@ export default class StopwatchPlugin extends Plugin {
 			decorations: DecorationSet;
 			constructor(view: EditorView) { this.decorations = build(view); }
 			update(u: ViewUpdate) {
-				if (u.docChanged || u.viewportChanged || u.selectionSet) this.decorations = build(u.view);
+				const lpChanged = u.startState.field(editorLivePreviewField, false) !== u.state.field(editorLivePreviewField, false);
+				if (u.docChanged || u.viewportChanged || u.selectionSet || lpChanged) this.decorations = build(u.view);
 			}
 		}, { decorations: (v) => v.decorations });
 	}
@@ -206,21 +208,23 @@ export default class StopwatchPlugin extends Plugin {
 		refresh();
 
 		startBtn.addEventListener('click', () => {
-			state = { accumulated: state.accumulated, startSec: this.nowSec(), isRunning: true };
+			const now = this.nowSec();
+			state = { accumulated: state.accumulated, startSec: now, isRunning: true, firstStartSec: state.firstStartSec || now };
 			refresh(); persist();
 		});
 		stopBtn.addEventListener('click', () => {
-			state = { accumulated: this.currentElapsed(state), startSec: 0, isRunning: false };
+			state = { accumulated: this.currentElapsed(state), startSec: 0, isRunning: false, firstStartSec: state.firstStartSec };
 			refresh(); persist();
 		});
 		resetBtn.addEventListener('click', () => {
-			state = { accumulated: 0, startSec: 0, isRunning: false };
+			state = { accumulated: 0, startSec: 0, isRunning: false, firstStartSec: 0 };
 			refresh(); persist();
 		});
 		finalizeBtn.addEventListener('click', async () => {
 			const total = this.currentElapsed(state);
 			const endTime = new Date();
-			const startTime = new Date(endTime.getTime() - total * 1000);
+			// Prefer the recorded first start so pauses don't shift the range; older stopwatches fall back to end - total
+			const startTime = state.firstStartSec > 0 ? new Date(state.firstStartSec * 1000) : new Date(endTime.getTime() - total * 1000);
 			await write(current, `⏱️ ${this.formatTime(total)} (${this.formatDateTime(startTime)} - ${this.formatDateTime(endTime)})`);
 		});
 
