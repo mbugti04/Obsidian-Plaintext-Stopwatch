@@ -198,6 +198,7 @@ export default class StopwatchPlugin extends Plugin {
 			container.dataset.running = String(state.isRunning);
 			display.textContent = this.formatTime(this.currentElapsed(state));
 			container.toggleClass('is-running', state.isRunning);
+			container.toggleClass('is-unstarted', !state.isRunning && state.accumulated === 0);
 		};
 		const persist = async () => {
 			const next = this.serialize(state);

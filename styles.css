@@ -21,6 +21,10 @@
 	color: var(--text-normal);
 }
 
+.stopwatch-container.is-unstarted .stopwatch-display {
+	color: var(--text-faint);
+}
+
 .stopwatch-btn {
 	background: none;
 	border: none;
