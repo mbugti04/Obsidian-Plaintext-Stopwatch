@@ -1,7 +1,7 @@
 {
 	"id": "plaintext-stopwatch",
 	"name": "Plaintext Stopwatch",
-	"version": "1.1.2",
+	"version": "1.1.3",
 	"minAppVersion": "1.1.0",
 	"description": "Add in-text stopwatches that store their state as plain text in your notes.",
 	"author": "mbugti04",
